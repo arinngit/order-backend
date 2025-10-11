@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>orders_backend.business</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="4.3.1-dev-02373" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectRefence Include="../orders-backend.data-access/orders-backend.data-access.csproj"/>
+    <ProjectReference Include="../orders-backend.domain/orders-backend.domain.csproj" />
+    <ProjectReference Include="../orders-backend.contracts/orders-backend.contracts.csproj" />
+  </ItemGroup>
+</Project>

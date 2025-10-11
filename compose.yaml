@@ -1,0 +1,17 @@
+services:
+  productservice:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - HOST=productdb
+      - PORT=5432
+      - DATABASE=ProductDB
+      - USERNAME=postgres
+      - PASSWORD=product123!@#
+    ports:
+      - "5160:5155"
+
+volumes:
+  product_data:
