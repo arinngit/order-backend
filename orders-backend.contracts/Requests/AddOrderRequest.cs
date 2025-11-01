@@ -23,4 +23,5 @@ public class AddOrderRequest
     public decimal FinalAmount { get; set; }
     public int StatusId { get; set; }
     public string PromoCode { get; set; } = null!;
+    public List<OrderItemRequest> OrderItems { get; set; } = new();
 }

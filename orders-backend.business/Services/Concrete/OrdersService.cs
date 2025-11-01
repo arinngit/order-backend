@@ -16,34 +16,95 @@ public class OrdersService : IOrdersService
         _users = users;
     }
 
-    public async Task<Order> Add(AddOrderRequest order)
+    public async Task<Order> Add(AddOrderRequest orderRequest)
     {
+        if (orderRequest.OrderItems != null)
+        {
+            for (int i = 0; i < orderRequest.OrderItems.Count; i++)
+            {
+                var item = orderRequest.OrderItems[i];
+                Console.WriteLine($"  Item[{i}]: ProductId='{item.ProductId}', VariantId={item.VariantId}, Quantity={item.Quantity}, UnitPrice={item.UnitPrice}, TotalPrice={item.TotalPrice}, Size='{item.SizeName}', Color='{item.ColorName}'");
+            }
+        }
+    
         Order newOrder = new Order
         {
-            UserId = order.UserId,
-            OrdersNumber = order.OrdersNumber.ToString(),
-            TotalAmount = order.TotalAmount,
-            Country = order.Country,
-            FirstName = order.FirstName,
-            LastName = order.LastName,
-            Company = order.Company,
-            DeliveryOption = order.DeliveryOption,
-            Address = order.Address,
-            Appartment = order.Appartment,
-            PostalCode = order.PostalCode,
-            City = order.City,
-            Phone = order.Phone,
-            TaxAmout = order.TaxAmout,
-            ShippingAmount = order.ShippingAmount,
-            DiscountAmount = order.DiscountAmount,
-            FinalAmount = order.FinalAmount,
-            StatusId = order.StatusId,
-            PromoCode = order.PromoCode,
+            UserId = orderRequest.UserId,
+            OrdersNumber = orderRequest.OrdersNumber.ToString(),
+            TotalAmount = orderRequest.TotalAmount,
+            Country = orderRequest.Country,
+            FirstName = orderRequest.FirstName,
+            LastName = orderRequest.LastName,
+            Company = orderRequest.Company,
+            DeliveryOption = orderRequest.DeliveryOption,
+            Address = orderRequest.Address,
+            Appartment = orderRequest.Appartment,
+            PostalCode = orderRequest.PostalCode,
+            City = orderRequest.City,
+            Phone = orderRequest.Phone,
+            TaxAmout = orderRequest.TaxAmout,
+            ShippingAmount = orderRequest.ShippingAmount,
+            DiscountAmount = orderRequest.DiscountAmount,
+            FinalAmount = orderRequest.FinalAmount,
+            StatusId = orderRequest.StatusId,
+            PromoCode = orderRequest.PromoCode,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
-
-        return await _orders.Add(newOrder);
+    
+        Console.WriteLine($"Creating order in DB...");
+    
+        var createdOrder = await _orders.Add(newOrder);
+    
+        Console.WriteLine($"Order created with Id: {createdOrder.Id}");
+    
+        if (createdOrder.Id == 0)
+        {
+            Console.WriteLine("ERROR: Order creation failed (Id = 0)");
+            return new Order();
+        }
+    
+        var orderItems = orderRequest.OrderItems.Select(item => new OrderItem
+        {
+            OrderId = createdOrder.Id,
+            ProductId = item.ProductId,
+            VariantId = item.VariantId,
+            Quantity = item.Quantity,
+            UnitPrice = item.UnitPrice,
+            TotalPrice = item.TotalPrice,
+            SizeName = item.SizeName,
+            ColorName = item.ColorName,
+            ColorHex = item.ColorHex
+        }).ToList();
+    
+        Console.WriteLine($"Prepared {orderItems.Count} OrderItems for insertion:");
+    
+        foreach (var item in orderItems)
+        {
+            Console.WriteLine($"  -> OrderId={item.OrderId}, ProductId='{item.ProductId}', VariantId={item.VariantId}, Quantity={item.Quantity}");
+        }
+    
+        if (orderItems.Any())
+        {
+            Console.WriteLine("Inserting OrderItems into DB...");
+            bool itemsAdded = await _orders.AddOrderItems(orderItems);
+    
+            if (!itemsAdded)
+            {
+                Console.WriteLine($"ERROR: Failed to add OrderItems for OrderId: {createdOrder.Id}");
+            }
+            else
+            {
+                Console.WriteLine($"SUCCESS: {orderItems.Count} OrderItems inserted for OrderId: {createdOrder.Id}");
+            }
+        }
+        else
+        {
+            Console.WriteLine("No OrderItems to insert.");
+        }
+    
+        Console.WriteLine("=== OrdersService.Add END ===");
+        return createdOrder;
     }
 
     public async Task<Boolean> Cancel(Guid orderId)
@@ -62,6 +123,7 @@ public class OrdersService : IOrdersService
 
         if (user.Id == 0)
         {
+            Console.WriteLine("User not found");
             return [];
         }
 

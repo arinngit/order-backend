@@ -23,17 +23,26 @@ public class OrdersRepository : IOrdersRepository
         {
             await using NpgsqlConnection connection = _factory.CreateConnectionProductDb();
 
-            const string query = @"insert into ""Orders"" (""UserId"", ""OrdersNumber"", ""TotalAmount"", ""Country"", ""FirstName"", ""LastName"", ""Company"", ""DeliveryOption"", ""Address"", ""Appartment"", ""PostalCode"", ""City"", ""Phone"", ""TaxAmout"", ""ShippingAmount"", ""DiscountAmount"", ""FinalAmount"", ""StatusId"", ""PromoCode"", ""CreatedAt"", ""UpdatedAt"")
-values (@userId, @ordersNumber, @totalAmount, @country, @firstName, @lastName, @company, @deliveryOption, @address, @appartment, @postalCode, @city, @phone, @taxAmout, @shippingAmount, @discountAmount, @finalAmount, @statusId, @promoCode, @createdAt, @updatedAt);";
+            const string query = @"
+            INSERT INTO ""Orders"" (
+                ""UserId"", ""OrdersNumber"", ""TotalAmount"", ""Country"", ""FirstName"", ""LastName"", 
+                ""Company"", ""DeliveryOption"", ""Address"", ""Appartment"", ""PostalCode"", ""City"", 
+                ""Phone"", ""TaxAmout"", ""ShippingAmount"", ""DiscountAmount"", ""FinalAmount"", 
+                ""StatusId"", ""PromoCode"", ""CreatedAt"", ""UpdatedAt""
+            )
+            VALUES (
+                @userId, @ordersNumber, @totalAmount, @country, @firstName, @lastName, 
+                @company, @deliveryOption, @address, @appartment, @postalCode, @city, 
+                @phone, @taxAmout, @shippingAmount, @discountAmount, @finalAmount, 
+                @statusId, @promoCode, @createdAt, @updatedAt
+            )
+            RETURNING ""Id"";";
 
-            System.Console.WriteLine(query);
+            var orderId = await connection.ExecuteScalarAsync<int>(query, order);
 
-            System.Console.WriteLine(order.UserId);
-
-            int rowsAffected = await connection.ExecuteAsync(query, order);
-
-            if (rowsAffected == 1)
+            if (orderId > 0)
             {
+                order.Id = orderId;
                 return order;
             }
 
@@ -44,6 +53,34 @@ values (@userId, @ordersNumber, @totalAmount, @country, @firstName, @lastName, @
             Log.Error($"Error In OrdersRepository::Add {e.Message}");
             Console.WriteLine($"Error In OrdersRepository::Add {e.Message}");
             return new Order();
+        }
+    }
+    
+    public async Task<bool> AddOrderItems(List<OrderItem> orderItems)
+    {
+        try
+        {
+            await using NpgsqlConnection connection = _factory.CreateConnectionProductDb();
+
+            const string query = @"
+            INSERT INTO ""OrderItems"" (
+                ""OrderId"", ""ProductId"", ""VariantId"", ""Quantity"", ""UnitPrice"", ""TotalPrice"",
+                ""SizeName"", ""ColorName"", ""ColorHex""
+            )
+            VALUES (
+                @orderId, @productId, @variantId, @quantity, @unitPrice, @totalPrice,
+                @sizeName, @colorName, @colorHex
+            );";
+
+            int rowsAffected = await connection.ExecuteAsync(query, orderItems);
+
+            return rowsAffected == orderItems.Count;
+        }
+        catch (Exception e)
+        {
+            Log.Error($"Error In OrdersRepository::AddOrderItems {e.Message}");
+            Console.WriteLine($"Error In OrdersRepository::AddOrderItems {e.Message}");
+            return false;
         }
     }
 
@@ -99,7 +136,7 @@ values (@userId, @ordersNumber, @totalAmount, @country, @firstName, @lastName, @
                 limit @pageSize offset @offset
             ";
 
-            int offset = pageSize * pageIndex;
+            int offset = pageSize * (pageIndex - 1);
 
             IEnumerable<Order> orders = await connection.QueryAsync<Order>(query, new { pageSize, offset, userId });
 
